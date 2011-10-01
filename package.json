@@ -6,5 +6,6 @@
       "express": "2.4.6"
     , "jinjs": "> 0.0.1"
     , "socket.io-client": "> 0.0.1"
+    , "socket.io": "> 0.0.1"
   }
 }
