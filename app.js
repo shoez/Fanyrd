@@ -10,6 +10,7 @@ var app = module.exports = express.createServer();
 var io = require('socket.io').listen(app);
 io.set('transports', ['xhr-polling']); io.set('polling duration', 10);
 
+
 var data = new Object();
 
 data.conferences = {
@@ -44,14 +45,6 @@ data.live_rating = {
 };
 
 data.user = {
-	shoez: {
-		twitter: '@shoez',
-		name: 'Tom Leitch'
-	},
-	indeox: {
-		twitter: '@indeox',
-		name: 'David Vella'
-	}
 };
 
 
@@ -140,7 +133,7 @@ app.post('/talk', function(req, res){
 });
 
 
-app.listen(80);
+app.listen(8080);
 console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
 
 
