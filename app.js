@@ -76,14 +76,14 @@ app.configure('production', function(){
 
 // Routes
 
-app.get('/', function(req, res){
-  res.render('index', {
+app.get('/view', function(req, res){
+  res.render('view.jinjs', {
     title: 'Express'
   });
 });
 
 
-app.get('/home', function(req, res){
+app.get('/', function(req, res){
   res.render('home.jinjs', {
     title: 'All talks'
   });
