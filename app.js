@@ -88,15 +88,7 @@ app.get('/', function(req, res){
 });
 
 
-app.get('/talk', function(req, res){
-  res.render('talk.jinjs', {
-    title: 'About ' 
-  });
-});
-
-
 app.get('/talk/:id', function(req, res){
-
   res.render('talk.jinjs', {
     title: 'About ' + data.talks[req.params.id]
   });
@@ -169,8 +161,6 @@ App.prototype = {
 
 
 /****************************/
-
-
 
 
 
