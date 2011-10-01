@@ -23,8 +23,8 @@ data.conferences = {
 };
 
 data.talks = {
-	'dv1': {
-		id: 'dv1',
+	'fanyrd': {
+		id: 'fanyrd',
 		conference: 'ota2011',
 		date: '2011-09-30',
 		start: '2011-09-30 23:00:00',
@@ -35,7 +35,7 @@ data.talks = {
 data.to_process = new Array();
 
 data.live_rating = {
-	dv1: {
+	fanyrd: {
 		shoez: [],
 		indeox: [],
 		aggregate: [],
@@ -62,13 +62,15 @@ data.clients = 0;
 // Configuration
 
 app.configure(function(){
-  app.set('views', __dirname + '/views');
-  app.set('view engine', 'jinjs');
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(app.router);
-  app.use(express.static(__dirname + '/public'));
-  app.set("view options", { layout: false })
+  	app.set('views', __dirname + '/views');
+  	app.set('view engine', 'jinjs');
+  	app.use(express.bodyParser());
+  	app.use(express.methodOverride());
+  	app.use(app.router);
+  	app.use(express.static(__dirname + '/public'));
+  	app.set("view options", { layout: true });
+	app.use(express.cookieParser());
+	app.use(express.session({ secret: "keyboard cat" }));
 });
 
 app.configure('development', function(){
@@ -88,10 +90,50 @@ app.get('/', function(req, res){
 });
 
 
-app.get('/talk/:id', function(req, res){
-  res.render('talk.jinjs', {
-    title: 'About ' + data.talks[req.params.id]
+app.get('/home', function(req, res){
+  res.render('home.jinjs', {
+    title: 'All talks'
   });
+});
+
+app.post('/talks', function(req, res){
+
+	if (req.body.name == '' || req.body.name == '@') {
+		res.redirect('home');
+	} else {
+		if (req.session === undefined) {
+			req.session = {};
+		}
+		req.session.userId = req.body.name;
+		res.render('talks.jinjs', {
+    		title: 'All talks',
+    		user: req.body.name
+  		});
+  	}
+});
+
+
+app.post('/talk', function(req, res){
+
+	if (req.body.name == '' || req.body.name == '@') {
+		res.redirect('home');
+	}
+	if (req.body.conference == '' || !req.body.conference) {
+		res.redirect('home');
+	}
+	if (req.body.talk == '' || !req.body.talk) {
+		res.redirect('home');
+	}
+	
+	console.log(req.body.talk);
+	console.log(req.body.conference);
+
+	res.render('talk.jinjs', {
+		title: 'About ' + data.talks[req.params.talk],
+	    user: req.body.name,
+    	conference: req.body.conference,
+    	talk: req.body.talk
+  	});
 });
 
 
@@ -115,7 +157,7 @@ io.sockets.on('connection', function (socket) {
 	
 	
 	setInterval(function() {
-		socket.broadcast.emit('live', data.clients);
+		socket.broadcast.emit('live', data.live_rating);
 	}, 200);
 	
 	socket.on('rate', function (d) {
@@ -142,6 +184,12 @@ App.prototype = {
 		
 		data.live_rating[rating.id].aggregate.push(rating.r);
 		data.live_rating[rating.id].totalScore += rating.r;
+		
+		if (data.live_rating[rating.id].totalScore > 1) {
+			data.live_rating[rating.id].totalScore = 1;
+		} else if (data.live_rating[rating.id].totalScore < -1) {
+			data.live_rating[rating.id].totalScore = -1;
+		}
 		//console.log(data.live_rating[rating.id].totalScore);
 
 	},
