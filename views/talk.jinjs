@@ -5,6 +5,7 @@
         feelpad = {};
         feelpad.user = "{{user}}";
         feelpad.talk = "{{talk}}";
+        feelpad.port = "{{ port }}";
     </script>
     <link type="text/css" rel="stylesheet" href="/stylesheets/style.css">	
     <style>.ui-content { padding: 0 !important; }</style>

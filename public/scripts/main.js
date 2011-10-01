@@ -1,7 +1,7 @@
  $(document).ready(function() {
             var id = Math.random();
         
-            var socket = io.connect(document.domain, { port: {{ port }} });
+            var socket = io.connect(document.domain, { port: feelpad.port });
             
             socket.on('connect', function () {
                 socket.send('hi send');
