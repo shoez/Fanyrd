@@ -79,7 +79,8 @@ app.configure('production', function(){
 
 app.get('/view', function(req, res){
   res.render('view.jinjs', {
-    title: 'Express'
+    title: 'Express',
+    layout: false
   });
 });
 
