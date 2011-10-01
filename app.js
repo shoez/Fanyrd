@@ -119,13 +119,12 @@ io.sockets.on('connection', function (socket) {
 	}, 200);
 	
 	socket.on('rate', function (d) {
-		console.log('rate!!');
 		data.to_process.push(d);
   	});
 
 	socket.on('disconnect', function () {
-    	socket.emit('user disconnected');
-    	data.clients--;
+		data.clients--;
+    	socket.broadcast.emit('clients', data.clients);
   	});
 });
 
@@ -137,23 +136,19 @@ io.sockets.on('connection', function (socket) {
 var App = function(){};
 App.prototype = {
 
-	rateTalk: function(talk, userId, timestamp, ratingArray) {
-
+	rateTalk: function(talk, rating) {
 		var r = new Resolver();
-		/*var seconds = r.resolveTimestamp(timestamp, talk.start);
-		this.updateRating(talk.id, userId, seconds, ratingArray);*/
+		console.log('rating', rating, talk);
+		
+		data.live_rating[rating.id].aggregate.push(rating.r);
+		data.live_rating[rating.id].totalScore += rating.r;
+		//console.log(data.live_rating[rating.id].totalScore);
+
 	},
 
 
 	updateRating: function(id, userId, secondsSinceStart, ratingArray) {
-		/*var halfSeconds = secondsSinceStart * 2;
-		var aggregate = 0;
-		for (var i = 0; i < ratingArray.length; i++) {
-			data.live_rating[id][userId][halfSeconds+i] += ratingArray[i];
-			data.live_rating[id]['aggregate'][halfSeconds+i] += ratingArray[i];
-			data.live_rating[id].totalScore += ratingArray[i];
-		}*/
-		
+
 	},
 
 };
@@ -170,10 +165,9 @@ var myApp = new App();
 setInterval(function() {
 	while (data.to_process.length){
 	    req = data.to_process.pop();
-		myApp.rateTalk(data.talks[req.id], req.user, req.timestamp, req.rating);
-		console.log('processing req');
+		myApp.rateTalk(data.talks[req.id], req);
 	}
-}, 200);
+}, 100);
 
 
 

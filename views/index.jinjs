@@ -2,7 +2,9 @@
 <head>
 	<script src="/socket.io/socket.io.js"></script>
 	<script>
-
+		
+		var id = Math.random();
+		
   		var socket = io.connect();
   		socket.on('connect', function () {
 		    socket.send('hi send');
@@ -12,7 +14,9 @@
 			setInterval(function() {
 				var t = new Date();
 				//console.log( (t.getTime()-t.getMilliseconds())/1000 );
-				socket.emit('rate', { t: t, r: 10 });
+				var rating = Math.random(1);
+				rating = (Math.random() > 0.5) ? rating : -rating; 
+				socket.emit('rate', { t: t, r: rating, id: 'dv1', user: id });
 			}, 2000);
 			
 			socket.on('clients', function (count) {
