@@ -10,6 +10,7 @@ var app = module.exports = express.createServer();
 var io = require('socket.io').listen(app);
 io.set('transports', ['xhr-polling']); io.set('polling duration', 10);
 
+var port = process.env.PORT || 3000;
 
 var data = new Object();
 
@@ -128,12 +129,13 @@ app.post('/talk', function(req, res){
 		title: 'About ' + data.talks[req.params.talk],
 	    user: req.body.user,
     	conference: req.body.conference,
-    	talk: req.body.talk
+    	talk: req.body.talk,
+    	port: port
   	});
 });
 
 
-var port = process.env.PORT || 3000;
+
 app.listen(port);
 console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
 

@@ -1,7 +1,8 @@
  $(document).ready(function() {
             var id = Math.random();
         
-            var socket = io.connect();
+            var socket = io.connect(document.domain, { port: {{ port }} });
+            
             socket.on('connect', function () {
                 socket.send('hi send');
                 console.log('connect'); 
