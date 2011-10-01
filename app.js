@@ -128,7 +128,6 @@ io.sockets.on('connection', function (socket) {
 	
 	socket.on('rate', function (d) {
 		console.log('rate!!');
-		console.log(d);
 		data.to_process.push(d);
   	});
 
@@ -142,7 +141,7 @@ io.sockets.on('connection', function (socket) {
 
 /****************************/
 
-
+/* This is the bit that processes the rating for each talk and each user */
 var App = function(){};
 App.prototype = {
 
@@ -176,23 +175,20 @@ App.prototype = {
 
 
 var myApp = new App();
-setInterval(function() {
 
+/* Every 200 milliseconds go through the array and add the data ready to be processed */
+setInterval(function() {
 	while (data.to_process.length){
 	    req = data.to_process.pop();
-	    //console.log(req);
-	    //console.log(data);
 		myApp.rateTalk(data.talks[req.id], req.user, req.timestamp, req.rating);
 		console.log('processing req');
 	}
-
 }, 200);
 
 
 
 
 var Resolver = function(){};
-
 Resolver.prototype = {
 	/* returns seconds since the session started */
 	resolveTimestamp: function(timestamp, startTime) {
