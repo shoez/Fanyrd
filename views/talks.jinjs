@@ -13,7 +13,7 @@
 
 {% block body %}
 			
-			<p>Find a talk to rate.</p>
+			<p>Hey {{ user }}! Get rating.</p>
 
 			<form action="/talk" method="post" data-ajax="false" class="ui-body ui-body-a ui-corner-all">
 				<fieldset>
@@ -25,11 +25,11 @@
 				   </select>
 				   <label for="talk" class="select">Talk:</label>
 				   <select name="talk" id="talk">
-					  <option value="dv1">Fanyrd</option>
+					  <option value="comps">Competition Presentations</option>
 				   </select>
 				</div>
-				<input type="hidden" name="name" id="name" value="{{ user }}" />
-				<button type="submit" data-theme="b" name="submit" value="submit-value">Start rating</button>
+				<input type="hidden" name="user" id="user" value="{{ user }}" />
+				<button type="submit" data-theme="b" name="submit" value="submit-value">Go go go go!</button>
 				</fieldset>
 			</form>
 		</div>

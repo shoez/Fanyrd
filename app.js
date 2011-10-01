@@ -18,24 +18,24 @@ data.conferences = {
 		location: 'Bletchley Park',
 		geo: { lat: -23.32, long: 0.243 },
 		from: '2011-09-30 09:00:00',
-		to: '2011-10-01 15:00:00'
+		to: '2011-10-01 18:00:00'
 	}
 };
 
 data.talks = {
-	'fanyrd': {
-		id: 'fanyrd',
+	'comps': {
+		id: 'comps',
 		conference: 'ota2011',
-		date: '2011-09-30',
-		start: '2011-09-30 23:00:00',
-		end: '2011-09-30 10:30:00'
+		date: '2011-10-01',
+		start: '2011-10-01 15:30:00',
+		end: '2011-10-01 17:00:00'
 	},
 };
 
 data.to_process = new Array();
 
 data.live_rating = {
-	fanyrd: {
+	comps: {
 		shoez: [],
 		indeox: [],
 		aggregate: [],
@@ -115,7 +115,7 @@ app.post('/talks', function(req, res){
 
 app.post('/talk', function(req, res){
 
-	if (req.body.name == '' || req.body.name == '@') {
+	if (req.body.user == '' || req.body.user == '@') {
 		res.redirect('home');
 	}
 	if (req.body.conference == '' || !req.body.conference) {
@@ -123,14 +123,17 @@ app.post('/talk', function(req, res){
 	}
 	if (req.body.talk == '' || !req.body.talk) {
 		res.redirect('home');
-	}
-	
-	console.log(req.body.talk);
-	console.log(req.body.conference);
+	}	
+
+	var user = req.body.user;
+	user = user.replace('@', '');
+	data.user[user] = { twitter: req.body.user, name: 'Unknown' };
+
+	data.live_rating[req.body.talk][user] = [];
 
 	res.render('talk.jinjs', {
 		title: 'About ' + data.talks[req.params.talk],
-	    user: req.body.name,
+	    user: req.body.user,
     	conference: req.body.conference,
     	talk: req.body.talk
   	});
