@@ -8,7 +8,7 @@ var express = require('express');
 var app = module.exports = express.createServer();
 
 var io = require('socket.io').listen(app);
-
+io.set('transports', ['xhr-polling']); io.set('polling duration', 10);
 
 var data = new Object();
 
