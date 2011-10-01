@@ -18,6 +18,10 @@
 			socket.on('clients', function (count) {
 				console.log('number of connected clients', count);
 			});
+			
+			socket.on('live', function (count) {
+				console.log('live data', count);
+			});
 
 		});
   		

@@ -10,6 +10,54 @@ var app = module.exports = express.createServer();
 var io = require('socket.io').listen(app);
 
 
+var data = new Object();
+
+data.conferences = {
+	ota2011: {
+		name: 'Over The Air 2011',
+		location: 'Bletchley Park',
+		geo: { lat: -23.32, long: 0.243 },
+		from: '2011-09-30 09:00:00',
+		to: '2011-10-01 15:00:00'
+	}
+};
+
+data.talks = {
+	'dv1': {
+		id: 'dv1',
+		conference: 'ota2011',
+		date: '2011-09-30',
+		start: '2011-09-30 23:00:00',
+		end: '2011-09-30 10:30:00'
+	},
+};
+
+data.to_process = new Array();
+
+data.live_rating = {
+	dv1: {
+		shoez: [],
+		indeox: [],
+		aggregate: [],
+		totalScore: 0
+	},
+};
+
+data.user = {
+	shoez: {
+		twitter: '@shoez',
+		name: 'Tom Leitch'
+	},
+	indeox: {
+		twitter: '@indeox',
+		name: 'David Vella'
+	}
+};
+
+
+data.clients = 0;
+
+
 
 // Configuration
 
@@ -78,10 +126,10 @@ io.sockets.on('connection', function (socket) {
 		socket.broadcast.emit('live', data.clients);
 	}, 200);
 	
-	socket.on('rate', function (data) {
+	socket.on('rate', function (d) {
 		console.log('rate!!');
-		console.log(name);
-		to_process.push(name);
+		console.log(d);
+		data.to_process.push(d);
   	});
 
 	socket.on('disconnect', function () {
@@ -101,22 +149,20 @@ App.prototype = {
 	rateTalk: function(talk, userId, timestamp, ratingArray) {
 
 		var r = new Resolver();
-		var seconds = r.resolveTimestamp(timestamp, talk.start);
-
-		this.updateRating(talk.id, userId, seconds, ratingArray);
+		/*var seconds = r.resolveTimestamp(timestamp, talk.start);
+		this.updateRating(talk.id, userId, seconds, ratingArray);*/
 	},
 
 
 	updateRating: function(id, userId, secondsSinceStart, ratingArray) {
-		var halfSeconds = secondsSinceStart * 2;
+		/*var halfSeconds = secondsSinceStart * 2;
 		var aggregate = 0;
 		for (var i = 0; i < ratingArray.length; i++) {
 			data.live_rating[id][userId][halfSeconds+i] += ratingArray[i];
 			data.live_rating[id]['aggregate'][halfSeconds+i] += ratingArray[i];
 			data.live_rating[id].totalScore += ratingArray[i];
-		}
+		}*/
 		
-		//data.live_rating[id].totalScore += aggregate;
 	},
 
 };
@@ -127,52 +173,6 @@ App.prototype = {
 
 
 
-var data = new Object();
-
-data.conferences = {
-	ota2011: {
-		name: 'Over The Air 2011',
-		location: 'Bletchley Park',
-		geo: { lat: -23.32, long: 0.243 },
-		from: '2011-09-30 09:00:00',
-		to: '2011-10-01 15:00:00'
-	}
-};
-
-data.talks = {
-	'dv1': {
-		id: 'dv1',
-		conference: 'ota2011',
-		date: '2011-09-30',
-		start: '2011-09-30 23:00:00',
-		end: '2011-09-30 10:30:00'
-	},
-};
-
-data.to_process = [];
-
-data.live_rating = {
-	dv1: {
-		shoez: [],
-		indeox: [],
-		aggregate: [].
-		totalScore: 0
-	},
-};
-
-data.user = {
-	shoez: {
-		twitter: '@shoez',
-		name: 'Tom Leitch'
-	},
-	indeox: {
-		twitter: '@indeox',
-		name: 'David Vella'
-	}
-};
-
-
-data.clients = 0;
 
 
 var myApp = new App();
