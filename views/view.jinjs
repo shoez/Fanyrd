@@ -15,13 +15,7 @@
         socket.on('connect', function () {
             socket.send('hi send');
             console.log('connect'); 
-            
-            setInterval(function() {
-                var t = new Date();
-                //console.log( (t.getTime()-t.getMilliseconds())/1000 );
-                socket.emit('rate', { t: t, r: 10 });
-            }, 2000);
-            
+
             socket.on('clients', function (count) {
                 console.log('number of connected clients', count);
             });

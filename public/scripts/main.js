@@ -47,7 +47,7 @@ function startApp(socket) {
          
         happiness = happiness.toFixed(2); // Round to 2 decimal places
         //result.html(imageName+": "+nowTime+': '+happiness);
-        socket.emit('rate', { t: nowDate, r: happiness, id:'dv1' });
+        socket.emit('rate', { t: nowDate, r: happiness, id:'comps' });
      }, 500);                
     
     $('#feelpad').bind("touchmove", function(e) {  

@@ -8,9 +8,9 @@ var express = require('express');
 var app = module.exports = express.createServer();
 
 var io = require('socket.io').listen(app);
-io.set('transports', ['xhr-polling']); io.set('polling duration', 10);
+//io.set('transports', ['xhr-polling']); io.set('polling duration', 10);
 
-var port = process.env.PORT || 3000;
+var port = process.env.PORT || 80;
 
 var data = new Object();
 
