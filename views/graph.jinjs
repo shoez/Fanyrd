@@ -1,0 +1,126 @@
+<<<<<<< HEAD
+<html>
+<head>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/libs/jquery/jquery.min.js"></script>
+    
+    <script type="text/javascript" src="js/libs/smoothie.js"></script>
+    
+    <style>
+        body {
+            background-color: #000;
+        }
+        h1 {
+            color:#fff;
+            font-family: "Helvetica Neue";
+            border-bottom:1px solid #666;
+            margin-bottom:10px;
+            padding-bottom:10px;
+        }
+        .canvas {
+            position:absolute;
+            top:70px;
+            bottom:10px;
+            left:10px;
+            right:10px;
+            display:block;
+            background-color:#222;
+        }
+        #chart {
+            width:100%;
+            height:150px;
+        }
+    </style>
+    
+    <script>
+        var ratings = new TimeSeries();
+      
+        // Create socket
+        var socket = io.connect();
+        var score = 50;
+        socket.on('connect', function () {
+            socket.send('hi send');
+            
+            socket.on('clients', function (count) {
+                //console.log('number of connected clients', count);
+            });
+            
+            socket.on('live', function (count, clients) {
+                //console.log("c", count, clients);
+                var count = Math.random() * 100;
+                var clients = 1;
+                score = count / clients;
+                console.log("score", score);
+                ratings.append(new Date().getTime(), score);
+                console.log("score", score);
+            });
+
+        });
+        
+        $(document).ready(function() {
+            var node = $("#chart");
+            //var chart = new SmoothieChart({minValue: -1.3, maxValue: 1.3});
+            var chart = new SmoothieChart({minValue: 0.0, maxValue: 100.0, maxValueScale: 10, millisPerPixel: 30});
+            chart.addTimeSeries(
+                ratings, 
+                {
+                    strokeStyle: 'rgba(0, 230, 0, 1)', 
+                    fillStyle: '#222', 
+                    lineWidth: 0.15
+                }
+            );
+            
+            // Stretch chart to fill screen (percentages don't work very well so setting pixel dimensions)
+            var width = node.closest("div").width();
+            var height = node.closest("div").height();
+            //node.width(width);
+            //node.height(height);
+            
+            chart.streamTo(node[0]);
+        });
+
+    </script>
+</head>
+<body id="www-fanyrd-com">
+
+    <div id="application" class="">
+        <header id="header">           
+            <h1>Fanyrd</h1>
+        </header>
+        
+        <div id="main" role="main">
+            <div>
+                <div class="canvas">
+                    <canvas resize="false" id="chart"></canvas>
+                </div>            
+            </div>
+        </div>
+        
+        <footer></footer>
+    </div>
+</body>
+</html>
+=======
+{% extends 'layout.jinjs' %}
+
+{% block scripts %}
+    <script>
+        feelpad = {};
+        feelpad.user = "{{user}}";
+        feelpad.talk = "{{talk}}";
+        feelpad.port = "{{ port }}";
+    </script>
+    <link type="text/css" rel="stylesheet" href="/stylesheets/style.css">	
+    <style>.ui-content { padding: 0 !important; }</style>
+  	<script src="/scripts/libs/underscore.js"></script>
+  	<script src="/scripts/main.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+{% endblock %}
+
+
+{% block body %}
+    <div id="feelpad"></div>
+{% endblock %}
+
+
+>>>>>>> ebe149264fc65f8fdddfbb593dacbaf4501293ba
