@@ -70,7 +70,7 @@ TimeSeries.prototype.append = function(timestamp, value) {
 function SmoothieChart(options) {
   // Defaults
   options = options || {};
-  options.grid = options.grid || { fillStyle:'#000000', strokeStyle: '#777777', lineWidth: 1, millisPerLine: 1000, verticalSections: 2 };
+  options.grid = options.grid || { fillStyle:'#222', strokeStyle: '#222', lineWidth: 1, millisPerLine: 1000, verticalSections: 2 };
   options.millisPerPixel = options.millisPerPixel || 20;
   options.fps = options.fps || 50;
   options.maxValueScale = options.maxValueScale || 1;
