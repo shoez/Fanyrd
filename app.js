@@ -9,9 +9,12 @@ var express = require('express');
 	sys = require("sys"),
 	redis = require("redis-node"),
 	nbs = require('./base60');
-	OAuth = require('ciaranj-node-oauth-99e6259').OAuth;
-
+	OAuth = require('ciaranj-node-oauth-99e6259').OAuth,
+	MemStore = require('express/node_modules/connect/lib/middleware/session/memory'),
+	events = require('events');
 	
+	
+var eventEmitter = new events.EventEmitter();
 	
 var _twitterConsumerKey = "SYuJNZz75wxB43eE5qgddg";
 var _twitterConsumerSecret = "Pc3mmN4o1uEiws5P55aGIbdKpTjZyn6cz9GVFvj0";
@@ -42,13 +45,14 @@ app.configure(function(){
   	app.set('view engine', 'jinjs');
   	
   	app.use(express.cookieParser());
-	app.use(express.session({ secret: "fh798HNjiojul00932" }));
+  	app.use(express.session({store: MemStore({reapInterval: 60000 * 10}) ,  secret: 'is a secret'})); 
+	//app.use(express.session({ secret: "fh798HNjiojul00932" }));
 	
   	app.use(express.bodyParser());
   	app.use(express.methodOverride());
   	
   	app.use(express.static(__dirname + '/public'));
-  	app.set("view options", { layout: true });
+  	app.set("view options", { layout: false });
 	app.use(app.router);
 });
 
@@ -65,9 +69,13 @@ app.configure('development', function(){
 // Routes
 
 app.get('/', function(req, res){
-  res.render('index.jinjs', {
-    title: 'Slider test'
-  });
+  try {
+	  res.render('index.jinjs', {
+    	title: 'Slider test'
+	  });
+  } catch(e) {
+     console.log(e);
+  }
 });
 
 
@@ -204,6 +212,9 @@ app.get('/sessions/callback', function(req, res) {
 				if (error) {
 			  		res.send("Error getting twitter screen name : " + sys.inspect(error), 500);
 				} else {
+					//profile_image_url
+					//screen_name
+					//name
 			  		req.session.twitterScreenName = data["screen_name"];    
 			  		res.send('You are signed in: ' + req.session.twitterScreenName);
 				}  
@@ -241,10 +252,10 @@ console.log("Express server listening on port %d in %s mode", app.address().port
 
 
 /******* socket.io bits */
-
+var globalSocket;
 io.sockets.on('connection', function (socket) {
 
-
+	globalSocket = socket;
 	// register ID of client
 	socket.on('setClientId', function (id) {
 	    socket.set('clientId', id, function () {
@@ -260,6 +271,10 @@ io.sockets.on('connection', function (socket) {
 		// client counter and tell the UI to start.
 	    socket.set('talkId', id, function () {
 			redisClient.incr('clients:'+id , function incrClients (err, count) {
+				if (err) {
+					console.log(err);
+					throw err;
+				}
 				console.log('incr clients now: ' + count);
 			});
       		socket.emit('talkReady');
@@ -275,25 +290,39 @@ io.sockets.on('connection', function (socket) {
 			talkId = id;
     	});
 	
-		redisClient.transaction( function getRating() {
+		//redisClient.transaction( function getRating() {
 
 			redisClient.get('clients:'+talkId, function(err, count) {
+				if (err) {
+					console.log(err);
+					throw err;
+				}
 				var clients = count;
 				redisClient.get('rating:'+talkId, function(err, rating) {
+					if (err) {
+						console.log(err);
+						throw err;
+					}
 					// send to the web clients
 					socket.emit('rating', JSON.stringify({ s: rating, c: clients }) );
 				});
 			});
-		});
+		//});
 	}, 300);
 	
 	socket.on('rate', function (d) {
 	
-		redisClient.transaction( function getRating() {
+		//redisClient.transaction( function getRating() {
 			var clientKey = 'client:'+d.id+':score';
 			
 			redisClient.get('rating:'+d.t, function(err, v) {
+				if (err) {
+					console.log(err);
+					throw err;
+				}
 				var rating = v;
+				//console.log('RATING> ' + v);
+
 				if (!rating || rating == undefined || rating < 0) {
 					rating = 0;
 				}
@@ -307,57 +336,88 @@ io.sockets.on('connection', function (socket) {
 					
 					var deltaRating = parseInt(d.s) - parseInt(lastRating);
 					rating = parseInt(rating) + deltaRating;
-					console.log('Client Score ID: ' + clientKey, 'Current rating: ' + rating + ', Last Client Rating: ' + lastRating + ', Delta: ' + deltaRating + ', New Rating: ' + d.s);
+					//console.log('Client Score ID: ' + clientKey, 'Current rating: ' + rating + ', Last Client Rating: ' + lastRating + ', Delta: ' + deltaRating + ', New Rating: ' + d.s);
 
-					redisClient.set(clientKey, d.s, function(err, didSet) { 
-						if (err) {
-							console.log(err);
-							throw err;
-						}
-					});
 					redisClient.set('rating:'+d.t, rating, function (err, didSet) { 
 						if (err) {
 							console.log(err);
 							throw err;
 						}		
+
+						redisClient.set(clientKey, d.s, function(err, didSet) { 
+							if (err) {
+								console.log(err);
+								throw err;
+							}
+							//console.log('Client rating ' + clientKey + ' set to: ' + d.s);
+						});
+						
+						//console.log('Global rating set to: ' + rating);
+						socket.emit('global.rating', JSON.stringify({rating:rating, didSet: didSet }) );
+
 					});
 							
 				});				
 			});
 
-		});
+		//});
 		
 		
   	});
 
 	socket.on('disconnect', function () {
-		var clientId;
+
 		socket.get('clientId', function (err, id) {
-			clientId = id;
-			console.log('Destroying Client ID: ', id);
-    	});
-		var talkId;
-		socket.get('talkId', function (err, id) {
-			talkId = id;
-    	});
-    	
-    	// now destroy the last score provided by the client
-    	redisClient.transaction( function destroyClient() {
-			redisClient.decr('clients:'+talkId, function decClients (err, count) {
+			if (err) throw err;
+			var clientId = id;
+			//console.log('Destroying Client ID: ', id);
+			
+			
+			socket.get('talkId', function (err, id) {
 				if (err) throw err;
-				console.log('dec clients now: ' + count);
-			});
-			var score = 0;
-			var clientKey = 'client:'+clientId+':score';
-			redisClient.get(clientKey, function(err, s) {
-				if (err) throw err;
-				score = s;
-				// decrement by the last score the client recorded...
-				redisClient.decrby('rating:'+talkId, score);
+				var talkId = id;
+				
+				// now destroy the last score provided by the client
+				redisClient.transaction( function destroyClient() {
+					redisClient.decr('clients:'+talkId, function decClients (err, count) {
+						if (err) throw err;
+
+						console.log('dec clients now: ' + count);
+						var score = 0;
+						var clientKey = 'client:'+clientId+':score';
+						
+						redisClient.get(clientKey, function(err, s) {
+							if (err) throw err;
+							score = s;
+							//console.log('rating for ' + talkId + ' now...: ' + score);
+
+							// decrement by the last score the client recorded...
+							redisClient.decrby('rating:'+talkId, score, function(err, num) {
+								if (err) throw err;
+								eventEmitter.emit('global.client.disconnect', JSON.stringify({disconnected:clientKey, score:score, talk: talkId }) );
+							});
+						});
+						
+					});
+		
+					
+				});
+					
 			});
 			
     	});
+
     	
   	});
+});
+
+
+
+/* send global messages to the web clients because you can't 
+  call socket.emit() from within a socket.get callback */
+eventEmitter.on('global.client.disconnect', function(message){
+	if (globalSocket) {
+		globalSocket.emit('global.client.disconnect', message);
+	}
 });
 
