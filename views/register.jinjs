@@ -1,0 +1,43 @@
+{% extends 'layout.jinjs' %}
+
+{% block scripts %}
+
+{% endblock %}
+
+
+{% block header %}
+	<h1>Register to get rating</h1>
+	<a href="/" data-icon="home" data-iconpos="notext" data-direction="reverse" class="ui-btn-right jqm-home">Home</a>
+{% endblock %}
+
+
+{% block body %}
+			
+<p>Once you've registered, we'll give you a URL that will allow friends to rate also.</p>
+
+<form action="/register" method="post" data-ajax="false" class="ui-body ui-body-a ui-corner-all">
+	<fieldset>
+	
+		<div data-role="fieldcontain">
+			{% if fields.name %}<span class="error">{{ fields.name }}</span>{% endif %}
+			<label for="name">Name of talk:</label>
+			<input type="text" name="name" id="name" value=""  />
+		</div>	
+		
+		<div data-role="fieldcontain">
+			{% if fields.twitter %}<span class="error">{{ fields.twitter }}</span>{% endif %}
+			<label for="twitter">Twitter username:</label>
+			<input type="text" name="twitter" id="twitter" value="@"  />
+		</div>	
+		
+		<div data-role="fieldcontain">
+			{% if fields.minutes %}<span class="error">{{ fields.minutes }}</span>{% endif %}
+		   <label for="minutes">Minutes to live:</label>
+		   <input type="range" name="minutes" id="minutes" value="30" min="5" max="90"  />
+		</div>
+		<button type="submit" data-theme="b" name="submit" value="submit-value">Go go go go!</button>
+	</fieldset>
+</form>
+
+
+{% endblock %}

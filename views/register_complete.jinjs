@@ -1,0 +1,20 @@
+{% extends 'layout.jinjs' %}
+
+{% block scripts %}
+
+{% endblock %}
+
+
+{% block header %}
+	<h1>Ready to rate</h1>
+	<a href="/" data-icon="home" data-iconpos="notext" data-direction="reverse" class="ui-btn-right jqm-home">Home</a>
+{% endblock %}
+
+
+{% block body %}
+			
+<p>Send the follow URL to friends so they can rate too <strong><a href="http://fanyrd.com/r/{{ talkCode }}">http://fanyrd.com/r/{{ talkCode }}</a></strong></p>
+
+
+
+{% endblock %}
