@@ -231,6 +231,33 @@ app.get('/r/:id', function(req, res){
 });
 
 
+
+// toms raiting...
+app.get('/rating/:id', function(req, res){
+
+
+	redisClient.get('rating:'+req.params.id, function(err, rating) {
+		if (err) {
+			console.log(err);
+			throw err;
+		}
+		
+		redisClient.get('clients:'+req.params.id, function(err, clients) {
+			if (err) {
+				console.log(err);
+				throw err;
+			}
+			res.render('rating.jinjs', {
+				title: 'Fischer Price rating',
+				rating: (rating / clients)
+			});
+  		
+  		});
+  	});
+
+});
+
+
 app.get('/rate/:id', function(req, res){
   res.render('rate.jinjs', {
     title: 'Get Rating'
