@@ -21,7 +21,8 @@ function startApp(socket) {
         maxHeight    = $(window).height(),
         date         = new Date(),
         startingTime = date.getTime(),
-        assetRoot    = "http://cdn.deepcobalt.com/fanyrd";
+        assetRoot    = "http://cdn.deepcobalt.com/fanyrd",
+        blockSending = false;
     
     
     // Prevent page from scrolling

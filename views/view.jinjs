@@ -21,8 +21,7 @@
             });
             
             socket.on('live', function (count) {
-                socketVal = Math.random();
-                ratings.append(new Date().getTime(), socketVal);
+                ratings.append(new Date().getTime(), count);
             });
 
         });

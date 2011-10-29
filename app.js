@@ -182,8 +182,9 @@ App.prototype = {
 		var r = new Resolver();
 		console.log('rating', rating, talk);
 		
-		data.live_rating[rating.id].aggregate.push(rating.r);
-		data.live_rating[rating.id].totalScore += rating.r;
+		rating.r = parseInt(rating.r)
+		data.live_rating[rating.id].aggregate.push();
+		data.live_rating[rating.id].totalScore += parseInt(rating.r);
 		
 		if (data.live_rating[rating.id].totalScore > 1) {
 			data.live_rating[rating.id].totalScore = 1;
