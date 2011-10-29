@@ -14,24 +14,22 @@
             console.log('yelp');
         });
 
+
+
 function startApp(socket) {
     
-    var result       = $('#result'),
+    var hasTouch     = 'ontouchstart' in document.documentElement,
+        result       = $('#result'),
         feelpad      = $('#feelpad'),
         maxHeight    = $(window).height(),
         date         = new Date(),
         startingTime = date.getTime(),
         assetRoot    = "http://cdn.deepcobalt.com/fanyrd",
-        blockSending = false;
-    
-    
-    // Prevent page from scrolling
-    /*
-    document.addEventListener('touchmove', function(e){
-        e.preventDefault();
-    });
-    */
-     
+        blockSending = false,
+        happiness    = 0,
+        mouseDown    = false;
+             
+    if (hasTouch) { $('body').addClass('touch'); }
     
     //Preload Images
     var preloadImg = new Image();
@@ -42,40 +40,67 @@ function startApp(socket) {
     }
     
 
-    sendHappiness = _.throttle(function(happiness, percentage) {
+    sendHappiness = _.throttle(function(happiness) {
         var nowDate   = new Date(),
             nowTime   = nowDate.getTime() - startingTime;
          
         happiness = happiness.toFixed(2); // Round to 2 decimal places
         //result.html(imageName+": "+nowTime+': '+happiness);
+        
+        console.log('sending '+happiness);
         socket.emit('rate', { t: nowDate, r: happiness, id:'comps' });
      }, 500);                
     
-    $('#feelpad').bind("touchmove", function(e) {  
-    //$('#feelpad')[0].addEventListener("touchmove", function(e) {  
-         //Disable scrolling by preventing default touch behaviour  
-
-         e.preventDefault();  
-         var orig = e.originalEvent;  
-         var x = orig.changedTouches[0].pageX;  
-         var y = orig.changedTouches[0].pageY;  
-         if (y<0) y=0;
-         if (y>maxHeight) y=maxHeight;
-         
-         var percentage = (y/maxHeight)*100,
-             happiness  = (((y/maxHeight)*2)-1)*-1;
-         
-         //var hue = happiness*100;
-         //feelpad.css('background-color', 'hsl('+hue+', 100%, 50%)');
-         //feelpad.css('background-color', 'hsl(350, '+(100-percentage)+'%, 50%)');
-         
+    
+    function updateFeelPad(percentage) {
          var imageNum  = Math.round((percentage/100*24)),
              imageNum  = (imageNum < 10) ? '0' + imageNum : imageNum,
              imageName = assetRoot+"/images/hand_seq_small/png_seq_small_000"+imageNum+".png";            
-         feelpad.css('background-image', 'url('+imageName+')');         
+         feelpad.css('background-image', 'url('+imageName+')');    
+         $('#result').html(imageName);         
+    }
+    
+    
+    feelpad.bind("mousedown", function(e) {
+        feelpad.addClass('active');
+        mouseDown = true;
+    });
+
+    feelpad.bind("mouseup", function(e) {
+        feelpad.removeClass('active');
+        mouseDown = false;
+    });
+    
+    
+    feelpad.bind("mousemove", function(e) {    
+         //console.log(e, e.originalEvent.pageY);
+         var y = e.originalEvent.pageY;
+
+         // Cap at limits
+         if (y<0) y=0;
+         if (y>maxHeight) y=maxHeight;
+        
+         var percentage = (y/maxHeight)*100;         
+         happiness  = (((y/maxHeight)*2)-1)*-1;
+
+         updateFeelPad(percentage);
+         if (mouseDown) { sendHappiness(happiness); }
+    });
+    
+    feelpad.bind("touchmove", function(e) {  
+         e.preventDefault();  
+         var y = e.originalEvent.changedTouches[0].pageY;           
          
-         $('#result').html(imageName);
-         sendHappiness(happiness, percentage);                     
+         // Cap at limits
+         if (y<0) y=0;
+         if (y>maxHeight) y=maxHeight;
+         
+         var percentage = (y/maxHeight)*100;        
+         happiness  = (((y/maxHeight)*2)-1)*-1;
+                  
+         updateFeelPad(percentage);
+         
+         sendHappiness(happiness);                     
     });  
     
     
