@@ -4,52 +4,34 @@
  */
 
 var express = require('express');
+	app = module.exports = express.createServer(),
+	io = require('socket.io').listen(app),
+	sys = require("sys"),
+	redis = require("redis-node"),
+	nbs = require('./base60');
+	OAuth = require('ciaranj-node-oauth-99e6259').OAuth;
 
-var app = module.exports = express.createServer();
+	
+	
+var _twitterConsumerKey = "SYuJNZz75wxB43eE5qgddg";
+var _twitterConsumerSecret = "Pc3mmN4o1uEiws5P55aGIbdKpTjZyn6cz9GVFvj0";
 
-var io = require('socket.io').listen(app);
-//io.set('transports', ['xhr-polling']); io.set('polling duration', 10);
+var hostname = process.env.HOSTNAME || '127.0.0.1';
+// Express/http server port
+var port = parseInt(process.env.PORT) || 8080;
 
-var port = process.env.PORT || 80;
-
-var data = new Object();
-
-data.conferences = {
-	ota2011: {
-		name: 'Over The Air 2011',
-		location: 'Bletchley Park',
-		geo: { lat: -23.32, long: 0.243 },
-		from: '2011-09-30 09:00:00',
-		to: '2011-10-01 18:00:00'
-	}
-};
-
-data.talks = {
-	'comps': {
-		id: 'comps',
-		conference: 'ota2011',
-		date: '2011-10-01',
-		start: '2011-10-01 15:30:00',
-		end: '2011-10-01 17:00:00'
-	},
-};
-
-data.to_process = new Array();
-
-data.live_rating = {
-	comps: {
-		shoez: [],
-		indeox: [],
-		aggregate: [],
-		totalScore: 0
-	},
-};
-
-data.user = {
-};
+// Redis
+var redisClient = redis.createClient(); 
 
 
-data.clients = 0;
+function twitterConsumer() {
+	console.log('consumer');
+	
+  	return new OAuth(
+    	"https://twitter.com/oauth/request_token", "https://twitter.com/oauth/access_token", 
+    	_twitterConsumerKey, _twitterConsumerSecret, "1.0A", "http://"+hostname+":"+port+"/sessions/callback", "HMAC-SHA1");
+}
+
 
 
 
@@ -58,82 +40,198 @@ data.clients = 0;
 app.configure(function(){
   	app.set('views', __dirname + '/views');
   	app.set('view engine', 'jinjs');
+  	
+  	app.use(express.cookieParser());
+	app.use(express.session({ secret: "fh798HNjiojul00932" }));
+	
   	app.use(express.bodyParser());
   	app.use(express.methodOverride());
-  	app.use(app.router);
+  	
   	app.use(express.static(__dirname + '/public'));
   	app.set("view options", { layout: true });
-	app.use(express.cookieParser());
-	app.use(express.session({ secret: "keyboard cat" }));
+	app.use(app.router);
+});
+
+app.dynamicHelpers({
+  session: function(req, res){
+    return req.session;
+  }
 });
 
 app.configure('development', function(){
   app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
 });
 
-app.configure('production', function(){
-  app.use(express.errorHandler()); 
-});
-
 // Routes
 
-app.get('/view', function(req, res){
-  res.render('view.jinjs', {
-    title: 'Express',
-    layout: false
-  });
-});
-
-
 app.get('/', function(req, res){
-  res.render('home.jinjs', {
-    title: 'All talks'
+  res.render('index.jinjs', {
+    title: 'Slider test'
   });
 });
 
-app.post('/talks', function(req, res){
 
-	if (req.body.name == '' || req.body.name == '@') {
-		res.redirect('home');
+app.get('/register', function(req, res){
+	res.render('register.jinjs', {
+		title: 'Register to rate',
+		fields: {}
+	});
+});
+
+app.post('/register', function(req, res){
+
+	var fields = {};
+	var err = false;
+
+	if (!req.body.name || req.body.name.length < 0 || req.body.name.length > 100) {
+		fields['name'] = 'Please enter the name of the talk';
+		err = true;
+	}
+	if (!req.body.twitter) {
+		fields['twitter'] = 'Please enter your Twitter username.';
+		err = true;
+	}
+	if (!req.body.minutes || req.body.minutes < 5 || req.body.minutes > 90) {
+		fields['minutes'] = 'Must be between 5 and 90 minutes.';
+		err = true;
+	}
+	
+	if (err) {
+		res.render('register.jinjs', {
+    		title: 'Register to rate',
+    		fields: fields
+	  	});
 	} else {
-		if (req.session === undefined) {
-			req.session = {};
+	
+		var s = Math.pow(2,32);
+        var n = Math.floor(Math.random()*s);
+        var talkCode = nbs.numtosxg(n);
+        
+        // check talkCode doesn't exist
+        
+        // check if user exists
+		redisClient.exists('user:'+req.body.twitter, function userExist(err, exists) {
+			if (!exists) {
+				 var userDetails = JSON.stringify({
+				 	user: req.body.twitter,
+				 	date: new Date(),
+				 	talksCreated: {},
+				 	lastLogin: new Date()
+				 });
+				
+				redisClient.set('user:'+req.body.twitter, userDetails, function (err, exists) {
+					if (err) {
+						console.log(err);
+						throw err;
+					}
+	    			var talkDetails = JSON.stringify({
+	    				name: req.body.name,
+	    				created: new Date(),
+	    				minutesLong: req.body.minutes,
+	    				expires: new Date(), // needs to be changed to Date + minutes
+	    				creator: req.body.twitter,
+	    				id: talkCode
+	    			});
+	    			
+	    			redisClient.set('talk:'+talkCode, talkDetails, function (err, exists) {
+	    				if (err) {
+							console.log(err);
+							throw err;
+						}
+	    			});	
+	    		});
+	    			
+			} //if exists
+			else {
+				var talkDetails = JSON.stringify({
+					name: req.body.name,
+					created: new Date(),
+					minutesLong: req.body.minutes,
+					expires: new Date(), // needs to be changed to Date + minutes
+					creator: req.body.twitter,
+					id: talkCode
+				});
+				
+				redisClient.set('talk:'+talkCode, talkDetails, function (err, exists) {
+					if (err) {
+						console.log(err);
+						throw err;
+					}
+				});	
+			}
+		});
+		
+		
+		res.render('register_complete.jinjs', {
+    		title: 'Registration complete',
+    		talkCode: talkCode,
+    		user: req.body.twitter,
+    		talkName: req.body.name,
+    		minutes: req.body.minutes
+	  	});
+	}
+});
+
+
+app.get('/sessions/connect', function authWithTwitter(req, res) {
+	console.log('/sessions/connect');
+	twitterConsumer().getOAuthRequestToken(function getOAuthRequestToken(error, oauthToken, oauthTokenSecret, results) {
+    	if (error) {
+			res.send("Error getting OAuth request token /sessions/connect : " + sys.inspect(error), 500);
+		} else {  
+			req.session.oauthRequestToken = oauthToken;
+			req.session.oauthRequestTokenSecret = oauthTokenSecret;
+			res.redirect("https://twitter.com/oauth/authorize?oauth_token="+req.session.oauthRequestToken);      
 		}
-		req.session.userId = req.body.name;
-		res.render('talks.jinjs', {
-    		title: 'All talks',
-    		user: req.body.name
-  		});
-  	}
+	});
+});
+
+app.get('/sessions/callback', function(req, res) {
+	sys.puts(">>"+req.session.oauthRequestToken);
+	sys.puts(">>"+req.session.oauthRequestTokenSecret);
+	sys.puts(">>"+req.query.oauth_verifier);
+	console.log(req.session);
+	console.log(req.query);
+	twitterConsumer().getOAuthAccessToken(req.session.oauthRequestToken, req.session.oauthRequestTokenSecret, req.query.oauth_verifier, function(error, oauthAccessToken, oauthAccessTokenSecret, results) {
+		if (error) {
+		  	res.send("Error getting OAuth access token : " + sys.inspect(error) + "["+oauthAccessToken+"]"+ "["+oauthAccessTokenSecret+"]"+ "["+sys.inspect(results)+"]", 500);
+		} else {
+			req.session.oauthAccessToken = oauthAccessToken;
+			req.session.oauthAccessTokenSecret = oauthAccessTokenSecret;
+			// Right here is where we would write out some nice user stuff
+			twitterConsumer().get("http://twitter.com/account/verify_credentials.json", req.session.oauthAccessToken, req.session.oauthAccessTokenSecret, function (error, data, response) {
+				console.log(data);
+				if (error) {
+			  		res.send("Error getting twitter screen name : " + sys.inspect(error), 500);
+				} else {
+			  		req.session.twitterScreenName = data["screen_name"];    
+			  		res.send('You are signed in: ' + req.session.twitterScreenName);
+				}  
+			});  
+		}
+	});
 });
 
 
-app.post('/talk', function(req, res){
 
-	if (req.body.user == '' || req.body.user == '@') {
-		res.redirect('home');
-	}
-	if (req.body.conference == '' || !req.body.conference) {
-		res.redirect('home');
-	}
-	if (req.body.talk == '' || !req.body.talk) {
-		res.redirect('home');
-	}	
 
-	var user = req.body.user;
-	user = user.replace('@', '');
-	data.user[user] = { twitter: req.body.user, name: 'Unknown' };
-
-	data.live_rating[req.body.talk][user] = [];
-
-	res.render('talk.jinjs', {
-		title: 'About ' + data.talks[req.params.talk],
-	    user: req.body.user,
-    	conference: req.body.conference,
-    	talk: req.body.talk,
-    	port: port
-  	});
+app.get('/r/:id', function(req, res){
+  res.redirect('/rate/' + req.params.id);
 });
+
+
+app.get('/rate/:id', function(req, res){
+  res.render('rate.jinjs', {
+    title: 'Get Rating'
+  });
+});
+
+app.get('/rate/list', function(req, res){
+  res.render('list.jinjs', {
+    title: 'List all to rate'
+  });
+});
+
 
 
 
@@ -145,91 +243,121 @@ console.log("Express server listening on port %d in %s mode", app.address().port
 /******* socket.io bits */
 
 io.sockets.on('connection', function (socket) {
-	//io.sockets.emit('clients', { clients: ++data.clients});
-	++data.clients;
-	//var msg = JSON.stringify({clients: data.clients});
-	//socket.broadcast.emit(msg);
+
+
+	// register ID of client
+	socket.on('setClientId', function (id) {
+	    socket.set('clientId', id, function () {
+	    	// tell the UI that things are nearly ready
+      		socket.emit('clientReady');
+    	});
+  	});
+  	
+  	// once the client has registered the client id, then it registers the talk
+	socket.on('setTalkId', function (id) {
 	
+		// when the client ID has been registered, then increment the 
+		// client counter and tell the UI to start.
+	    socket.set('talkId', id, function () {
+			redisClient.incr('clients:'+id , function incrClients (err, count) {
+				console.log('incr clients now: ' + count);
+			});
+      		socket.emit('talkReady');
+    	});
+    	
+
+  	});
+  	
 	
 	setInterval(function() {
-		socket.broadcast.emit('clients', data.clients);
-	}, 1000);
+		var talkId;
+		socket.get('talkId', function (err, id) {
+			talkId = id;
+    	});
 	
-	
-	setInterval(function() {
-		socket.broadcast.emit('live', data.live_rating);
-	}, 200);
+		redisClient.transaction( function getRating() {
+
+			redisClient.get('clients:'+talkId, function(err, count) {
+				var clients = count;
+				redisClient.get('rating:'+talkId, function(err, rating) {
+					// send to the web clients
+					socket.emit('rating', JSON.stringify({ s: rating, c: clients }) );
+				});
+			});
+		});
+	}, 300);
 	
 	socket.on('rate', function (d) {
-		data.to_process.push(d);
+	
+		redisClient.transaction( function getRating() {
+			var clientKey = 'client:'+d.id+':score';
+			
+			redisClient.get('rating:'+d.t, function(err, v) {
+				var rating = v;
+				if (!rating || rating == undefined || rating < 0) {
+					rating = 0;
+				}
+				
+				// do delta rating change
+				redisClient.get(clientKey, function(err, s) {
+					var lastRating = s;
+					if (!lastRating || lastRating == undefined) {
+						lastRating = 0;
+					}
+					
+					var deltaRating = parseInt(d.s) - parseInt(lastRating);
+					rating = parseInt(rating) + deltaRating;
+					console.log('Client Score ID: ' + clientKey, 'Current rating: ' + rating + ', Last Client Rating: ' + lastRating + ', Delta: ' + deltaRating + ', New Rating: ' + d.s);
+
+					redisClient.set(clientKey, d.s, function(err, didSet) { 
+						if (err) {
+							console.log(err);
+							throw err;
+						}
+					});
+					redisClient.set('rating:'+d.t, rating, function (err, didSet) { 
+						if (err) {
+							console.log(err);
+							throw err;
+						}		
+					});
+							
+				});				
+			});
+
+		});
+		
+		
   	});
 
 	socket.on('disconnect', function () {
-		data.clients--;
-    	socket.broadcast.emit('clients', data.clients);
+		var clientId;
+		socket.get('clientId', function (err, id) {
+			clientId = id;
+			console.log('Destroying Client ID: ', id);
+    	});
+		var talkId;
+		socket.get('talkId', function (err, id) {
+			talkId = id;
+    	});
+    	
+    	// now destroy the last score provided by the client
+    	redisClient.transaction( function destroyClient() {
+			redisClient.decr('clients:'+talkId, function decClients (err, count) {
+				if (err) throw err;
+				console.log('dec clients now: ' + count);
+			});
+			var score = 0;
+			var clientKey = 'client:'+clientId+':score';
+			redisClient.get(clientKey, function(err, s) {
+				if (err) throw err;
+				score = s;
+				// decrement by the last score the client recorded...
+				redisClient.decrby('rating:'+talkId, score);
+			});
+			
+    	});
+    	
   	});
 });
-
-
-
-/****************************/
-
-/* This is the bit that processes the rating for each talk and each user */
-var App = function(){};
-App.prototype = {
-
-	rateTalk: function(talk, rating) {
-		var r = new Resolver();
-		console.log('rating', rating, talk);
-		
-		rating.r = parseInt(rating.r)
-		data.live_rating[rating.id].aggregate.push();
-		data.live_rating[rating.id].totalScore += parseInt(rating.r);
-		
-		if (data.live_rating[rating.id].totalScore > 1) {
-			data.live_rating[rating.id].totalScore = 1;
-		} else if (data.live_rating[rating.id].totalScore < -1) {
-			data.live_rating[rating.id].totalScore = -1;
-		}
-		//console.log(data.live_rating[rating.id].totalScore);
-
-	},
-
-
-	updateRating: function(id, userId, secondsSinceStart, ratingArray) {
-
-	},
-
-};
-
-
-
-/****************************/
-
-
-
-var myApp = new App();
-
-/* Every 200 milliseconds go through the array and add the data ready to be processed */
-setInterval(function() {
-	while (data.to_process.length){
-	    req = data.to_process.pop();
-		myApp.rateTalk(data.talks[req.id], req);
-	}
-}, 100);
-
-
-
-
-var Resolver = function(){};
-Resolver.prototype = {
-	/* returns seconds since the session started */
-	resolveTimestamp: function(timestamp, startTime) {
-		var s = parseInt((Date.parse(startTime)) / 1000);
-		var c = parseInt((Date.parse(timestamp)) / 1000);
-		return c-s;
-	},
-};
-
-
 

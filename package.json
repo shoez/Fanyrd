@@ -1,5 +1,5 @@
 {
-    "name": "fanyrd"
+    "name": "fanyrd-testing-meter"
   , "version": "0.0.1"
   , "private": true
   , "dependencies": {
@@ -7,6 +7,11 @@
     , "jinjs": "> 0.0.1"
     , "socket.io-client": "> 0.0.1"
     , "socket.io": "> 0.0.1"
-    , "redis": "> 0.0.1"
+    , "redis-node": "> 0.0.1"
+    , "backbone-redis": "> 0.0.1"
+    , "node-oauth": "> 0.9.5"
+  },
+  "mappings": {
+    "perstore": "http://github.com/kriszyp/perstore/zipball/master"
   }
 }

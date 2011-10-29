@@ -1,40 +1,83 @@
-<html>
-<head>
-	<script src="/socket.io/socket.io.js"></script>
-	<script>
-		
-		var id = Math.random();
-		
-  		var socket = io.connect();
-  		socket.on('connect', function () {
-		    socket.send('hi send');
-			console.log('connect'); 
-			
-			
-			setInterval(function() {
-				var t = new Date();
-				//console.log( (t.getTime()-t.getMilliseconds())/1000 );
-				var rating = Math.random(1);
-				rating = (Math.random() > 0.5) ? rating : -rating; 
-				socket.emit('rate', { t: t, r: rating, id: 'dv1', user: id });
-			}, 2000);
-			
-			socket.on('clients', function (count) {
-				console.log('number of connected clients', count);
-			});
-			
-			socket.on('live', function (count) {
-				console.log('live data', count);
-			});
+{% extends 'layout.jinjs' %}
 
-		});
-  		
+{% block scripts %}
 
-		console.log('yelp');
+<script src="/socket.io/socket.io.js"></script>
 
-	</script>
-</head>
-<body>
+<script>
 
-</body>
-</html>
+$(document).ready(function() {
+
+	var clientId = parseInt(Math.random()*1000);
+	var talkId = 'TALK2';
+	
+	$('.ui-slider').hide();
+	
+	var socket = io.connect(document.domain);
+    socket.on('connect', function () {
+    	console.log('connected');
+    	
+    	socket.emit('setClientId', clientId);
+    	
+    	socket.on('clientReady', function onReady() {
+			console.log('client ready, waiting for talk ready');
+			socket.emit('setTalkId', talkId);
+    	});
+    	
+    	socket.on('talkReady', function onReady() {
+    		$('.ui-slider').show();
+    		socket.emit('rate', {s:$('#slider').val(), id:clientId, t:talkId});
+    	});
+    	
+    	
+    	socket.on('rating', function updateRating(data) {
+    		var json = $.parseJSON(data);
+    		$('#rating')[0].innerHTML = json.s;
+    		$('#clients')[0].innerHTML = json.c;
+    	});
+    });	
+	
+	var preventTransmit = false;
+	
+	var sliderFun = function() {
+	    var currentVal = $('#slider').val();
+    	socket.emit('rate', {s:parseInt(currentVal), id:clientId, t:talkId});	
+	};
+	
+	$('.ui-slider').live('mouseup', sliderFun);
+	$('.ui-slider').live('touchend', sliderFun);
+	
+	//$('.ui-slider').live('slide', sliderFun);
+	//$('.ui-slider').live('change', sliderFun);
+	$('#slider').bind('slide', sliderFun);
+	
+	// we don't want continuous feedback
+	/*setInterval(function continuousFeedback() {
+		if (preventTransmit) {
+			return;
+		}
+		socket.emit('rate', {s:parseInt($('#slider').val()), id:clientId});
+	}, 300);*/
+
+});
+
+</script>
+
+{% endblock %}
+
+
+{% block body %}
+
+<div data-role="fieldcontain">
+   <label for="slider">Input slider:</label>
+   <input type="range" name="slider" id="slider" value="50" min="0" max="100"  />
+</div>
+
+<div>
+	<p>Clients: <span id="clients">0</span></p>
+	<p>Rating: <span id="rating">0</span></p>
+</div>
+
+
+
+{% endblock %}
