@@ -1,10 +1,9 @@
-<<<<<<< HEAD
 <html>
 <head>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/libs/jquery/jquery.min.js"></script>
+	<script src="http://code.jquery.com/jquery-1.6.4.min.js"></script>
     
-    <script type="text/javascript" src="js/libs/smoothie.js"></script>
+    <script type="text/javascript" src="/js/libs/smoothie.js"></script>
     
     <style>
         body {
@@ -27,7 +26,7 @@
             background-color:#222;
         }
         #chart {
-            width:100%;
+            /*width:100%;*/
             height:150px;
         }
     </style>
@@ -36,6 +35,9 @@
         var ratings = new TimeSeries();
       
         // Create socket
+        var talkId = 'TALK5';
+       	var clientId = parseInt(Math.random()*1000);
+
         var socket = io.connect();
         var score = 50;
         socket.on('connect', function () {
@@ -45,16 +47,29 @@
                 //console.log('number of connected clients', count);
             });
             
-            socket.on('live', function (count, clients) {
-                //console.log("c", count, clients);
-                var count = Math.random() * 100;
-                var clients = 1;
-                score = count / clients;
-                console.log("score", score);
-                ratings.append(new Date().getTime(), score);
-                console.log("score", score);
-            });
 
+			socket.emit('setClientId', clientId);
+			
+			socket.on('clientReady', function onReady() {
+				console.log('client ready, waiting for talk ready');
+				socket.emit('setTalkId', talkId);
+			});
+			
+			socket.on('talkReady', function onReady() {
+			
+			           	socket.on('rating', function updateRating(data) {
+							var json = $.parseJSON(data);
+							var clients = json.c;
+							var count = json.s;
+							var score = count / clients;
+							console.log("score", score, data);
+							ratings.append(new Date().getTime(), score);
+							console.log("score", score);
+						});
+
+			
+			});
+			
         });
         
         $(document).ready(function() {
@@ -66,7 +81,7 @@
                 {
                     strokeStyle: 'rgba(0, 230, 0, 1)', 
                     fillStyle: '#222', 
-                    lineWidth: 0.15
+                    lineWidth: 7.75
                 }
             );
             
@@ -100,27 +115,3 @@
     </div>
 </body>
 </html>
-=======
-{% extends 'layout.jinjs' %}
-
-{% block scripts %}
-    <script>
-        feelpad = {};
-        feelpad.user = "{{user}}";
-        feelpad.talk = "{{talk}}";
-        feelpad.port = "{{ port }}";
-    </script>
-    <link type="text/css" rel="stylesheet" href="/stylesheets/style.css">	
-    <style>.ui-content { padding: 0 !important; }</style>
-  	<script src="/scripts/libs/underscore.js"></script>
-  	<script src="/scripts/main.js"></script>
-	<script src="/socket.io/socket.io.js"></script>
-{% endblock %}
-
-
-{% block body %}
-    <div id="feelpad"></div>
-{% endblock %}
-
-
->>>>>>> ebe149264fc65f8fdddfbb593dacbaf4501293ba

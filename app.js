@@ -9,7 +9,7 @@ var express = require('express');
 	sys = require("sys"),
 	redis = require("redis-node"),
 	nbs = require('./base60');
-	OAuth = require('ciaranj-node-oauth-99e6259').OAuth,
+	OAuth = require('node-oauth').OAuth,
 	MemStore = require('express/node_modules/connect/lib/middleware/session/memory'),
 	events = require('events');
 	
@@ -77,6 +77,19 @@ app.get('/', function(req, res){
      console.log(e);
   }
 });
+
+
+app.get('/graph/:id', function(req, res){
+  try {
+	  res.render('graph.jinjs', {
+    	title: 'Graph',
+    	talkId: req.params.id
+	  });
+  } catch(e) {
+     console.log(e);
+  }
+});
+
 
 
 app.get('/register', function(req, res){
@@ -292,33 +305,46 @@ io.sockets.on('connection', function (socket) {
   	});
   	
   	// once the client has registered the client id, then it registers the talk
-	socket.on('setTalkId', function (id) {
-	
-		// when the client ID has been registered, then increment the 
-		// client counter and tell the UI to start.
-	    socket.set('talkId', id, function () {
-			redisClient.incr('clients:'+id , function incrClients (err, count) {
-				if (err) {
-					console.log(err);
-					throw err;
-				}
-				console.log('incr clients now: ' + count);
+	socket.on('setTalkId', function (talkId) {
+		socket.get('clientId', function (err, clientId) {
+			
+			if (err) {
+				return;
+			}
+			
+			// when the client ID has been registered, then increment the 
+			// client counter and tell the UI to start.
+			socket.set('talkId', talkId, function (err) {
+			
+				redisClient.incr('client:' + clientId + ':talk:'+talkId, function(err, count) {
+					// already registered for the talk, don't increment anything.
+					if (count > 1) {
+						return;
+					} else {
+						redisClient.incr('clients:'+talkId , function incrClients (err, count) {
+							if (err) {
+								console.log(err);
+								throw err;
+							}
+							console.log('incr clients now: ' + count);
+						});
+						
+						socket.emit('talkReady');
+					}
+				});
 			});
-      		socket.emit('talkReady');
-    	});
-    	
-
+		
+		
+		});
   	});
   	
-	
-	setInterval(function() {
-		var talkId;
-		socket.get('talkId', function (err, id) {
-			talkId = id;
-    	});
-	
-		//redisClient.transaction( function getRating() {
 
+	// regular rating transmission.
+	setInterval(function() {
+		socket.get('talkId', function (err, id) {
+			var talkId = id;
+			
+			//redisClient.transaction( function getRating() {
 			redisClient.get('clients:'+talkId, function(err, count) {
 				if (err) {
 					console.log(err);
@@ -334,13 +360,17 @@ io.sockets.on('connection', function (socket) {
 					socket.emit('rating', JSON.stringify({ s: rating, c: clients }) );
 				});
 			});
-		//});
+			//});
+    	});
 	}, 300);
+	
+	
 	
 	socket.on('rate', function (d) {
 	
 		//redisClient.transaction( function getRating() {
 			var clientKey = 'client:'+d.id+':score';
+			var clientTalkKey = 'client:' + d.id + ':talk:' + d.t;
 			
 			redisClient.get('rating:'+d.t, function(err, v) {
 				if (err) {
@@ -381,7 +411,6 @@ io.sockets.on('connection', function (socket) {
 						
 						//console.log('Global rating set to: ' + rating);
 						socket.emit('global.rating', JSON.stringify({rating:rating, didSet: didSet }) );
-
 					});
 							
 				});				
@@ -393,51 +422,65 @@ io.sockets.on('connection', function (socket) {
   	});
 
 	socket.on('disconnect', function () {
-
-		socket.get('clientId', function (err, id) {
-			if (err) throw err;
-			var clientId = id;
-			//console.log('Destroying Client ID: ', id);
-			
-			
-			socket.get('talkId', function (err, id) {
-				if (err) throw err;
-				var talkId = id;
-				
-				// now destroy the last score provided by the client
-				redisClient.transaction( function destroyClient() {
-					redisClient.decr('clients:'+talkId, function decClients (err, count) {
-						if (err) throw err;
-
-						console.log('dec clients now: ' + count);
-						var score = 0;
-						var clientKey = 'client:'+clientId+':score';
-						
-						redisClient.get(clientKey, function(err, s) {
-							if (err) throw err;
-							score = s;
-							//console.log('rating for ' + talkId + ' now...: ' + score);
-
-							// decrement by the last score the client recorded...
-							redisClient.decrby('rating:'+talkId, score, function(err, num) {
-								if (err) throw err;
-								eventEmitter.emit('global.client.disconnect', JSON.stringify({disconnected:clientKey, score:score, talk: talkId }) );
-							});
-						});
-						
-					});
-		
-					
-				});
-					
-			});
-			
-    	});
-
-    	
+		disconnectClient(socket);
   	});
+  	
+  	socket.on('disconnectClient', function(data) {
+  		disconnectClient(socket);
+  	});
+  	
 });
 
+
+
+function makeSafeClientId(clientId) {
+	return clientId;
+}
+
+function disconnectClient(socket) {
+	socket.get('clientId', function (err, id) {
+		if (err) throw err;
+		var clientId = id;
+		//console.log('Destroying Client ID: ', id);
+		
+		
+		socket.get('talkId', function (err, id) {
+			if (err) throw err;
+			var talkId = id;
+			
+			// now destroy the last score provided by the client
+			redisClient.transaction( function destroyClient() {
+				redisClient.decr('clients:'+talkId, function decClients (err, count) {
+					if (err) { 
+						console.log('clients below acceptable norms');
+						return;
+						//throw err;
+					}
+
+					console.log('dec clients now: ' + count);
+					var score = 0;
+					var clientKey = 'client:'+clientId+':score';
+					
+					redisClient.get(clientKey, function(err, s) {
+						if (err) throw err;
+						score = s;
+						//console.log('rating for ' + talkId + ' now...: ' + score);
+						
+						// decrement by the last score the client recorded...
+						redisClient.decrby('rating:'+talkId, score, function(err, num) {
+							if (err) {
+								//throw err;
+								console.log('Rating below acceptable norms');
+								return;
+							} 
+							eventEmitter.emit('global.client.disconnect', JSON.stringify({disconnected:clientKey, score:score, talk: talkId }) );
+						});
+					});
+				});
+			});
+		});
+	});
+}
 
 
 /* send global messages to the web clients because you can't 
