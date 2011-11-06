@@ -28,12 +28,13 @@ $(document).ready(function() {
 	var socket = io.connect(document.domain, {
 		'reconnect': true,
 		'reconnection delay': 500,
-		'max reconnection attempts': 10
+		'max reconnection attempts': 5
 	});
 	
     socket.on('connect', function () {
     	console.log('connected');
     	connected = true;
+    	$('#connected').text('Connected');
     	
     	socket.emit('setClientId', clientId);
     	
@@ -61,16 +62,18 @@ $(document).ready(function() {
     	
     	socket.on('global.client.disconnect', function(data) {
     		var json = $.parseJSON(data);
-    		$('#global-client-disconnect-disconnected')[0].innerHTML = $('#global-client-disconnect-disconnected')[0].innerHTML + ", " + json.disconnected;
-			$('#global-client-disconnect-score')[0].innerHTML = $('#global-client-disconnect-score')[0].innerHTML + ", " + json.score;    		
+    		console.log(json);
+    		//$('#global-client-disconnect-disconnected')[0].innerHTML = $('#global-client-disconnect-disconnected')[0].innerHTML + ", " + json.disconnected;
+			//$('#global-client-disconnect-score')[0].innerHTML = $('#global-client-disconnect-score')[0].innerHTML + ", " + json.score;    		
     	});
     	
-    	
-		socket.on('disconnect', function() {
-		  	connected = false;
-		});
-    	
     });	
+	
+	socket.on('disconnect', function() {
+	  	connected = false;
+	  	$('#connected').text('Disconnected');
+	});
+    	
 	
 	var preventTransmit = false;
 	
@@ -108,37 +111,27 @@ $(document).unload(function() {
 <div data-role="page" class="type-index">
 
 
-
-
 	<div data-role="content">
-
-
-
-
-
-<div data-role="fieldcontain">
-   <label for="slider">Input slider:</label>
-   <input type="range" name="slider" id="slider" value="50" min="0" max="100"  />
-</div>
-
-<div>
-	<p>Clients: <span id="clients">0</span></p>
-	<p>Rating: <span id="rating">0</span></p>
-	
-	<h2>Global</h2>
-	<p>Rating: <span id="global-rating-rating">0</span></p>
-	<p>Did Set: <span id="global-rating-didSet">0</span></p>
-
-	<h2>Disconnects</h2>
-	<p>Just disconnected: <span id="global-client-disconnect-disconnected"></span></p>
-	<p>Disconnected Score: <span id="global-client-disconnect-score"></span></p>
-</div>
-
-
-
-
-
-
+		<h2 id="connected"></h2>
+		<div data-role="fieldcontain">
+		   <label for="slider">Input slider:</label>
+		   <input type="range" name="slider" id="slider" value="50" min="0" max="100"  />
+		</div>
+		
+		<div>
+			<p>Clients: <span id="clients">0</span></p>
+			<p>Rating: <span id="rating">0</span></p>
+			
+			<h2>Global</h2>
+			<p>Rating: <span id="global-rating-rating">0</span></p>
+			<p>Did Set: <span id="global-rating-didSet"></span></p>
+		
+			<!--<h2>Disconnects</h2>
+			<p>Just disconnected: <span id="global-client-disconnect-disconnected"></span></p>
+			<p>Disconnected Score: <span id="global-client-disconnect-score"></span></p>-->
+		</div>
+		
+		
 	</div><!-- /content -->
 </div><!-- /page -->
 
